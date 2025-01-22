@@ -6,7 +6,7 @@ import inspect
 import requests
 import numpy as np
 import torch
-from typing import Union, List, Dict
+from typing import Union, List, Dict, Optional
 from enum import Enum
 from PIL import Image, ImageOps, ImageChops, ImageEnhance, ImageFilter, PngImagePlugin
 from numpy import ndarray
@@ -441,8 +441,8 @@ def serialize_api_task_args(
     vae: str = None,
 ) -> Dict:
     # handle named script args
-    script_name = params.get("script_name", None)
-    if script_name is not None and script_name != "":
+    script_name : Optional[str] = params.get("script_name", None)
+    if script_name and not script_name.lower() == "none" :
         script = get_script_by_name(script_name, is_img2img)
         if script is None:
             raise Exception(f"Not found script {script_name}")
