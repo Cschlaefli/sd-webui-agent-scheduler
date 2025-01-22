@@ -2,7 +2,9 @@ import json
 import base64
 from enum import Enum
 from datetime import datetime, timezone
-from typing import Optional, Union, List, Dict
+from typing import Optional, Union, List, Dict, Any
+from pydantic import Field, Base64Bytes, Json
+
 
 from sqlalchemy import (
     TypeDecorator,
@@ -48,15 +50,12 @@ class TaskStatus(str, Enum):
 
 
 class Task(TaskModel):
-    script_params: bytes = None
-    params: str
+    script_params: Optional[Base64Bytes] = None
+    params: Json[Any]
 
     def __init__(self, **kwargs):
         priority = kwargs.pop("priority", int(datetime.now(timezone.utc).timestamp() * 1000))
         super().__init__(priority=priority, **kwargs)
-
-    class Config(TaskModel.__config__):
-        exclude = ["script_params"]
 
     @staticmethod
     def from_table(table: "TaskTable"):
@@ -90,41 +89,6 @@ class Task(TaskModel):
             result=self.result,
             bookmarked=self.bookmarked,
         )
-
-    def from_json(json_obj: Dict):
-        return Task(
-            id=json_obj.get("id"),
-            api_task_id=json_obj.get("api_task_id", None),
-            api_task_callback=json_obj.get("api_task_callback", None),
-            name=json_obj.get("name", None),
-            type=json_obj.get("type"),
-            status=json_obj.get("status", TaskStatus.PENDING),
-            params=json.dumps(json_obj.get("params")),
-            script_params=base64.b64decode(json_obj.get("script_params")),
-            priority=json_obj.get("priority", int(datetime.now(timezone.utc).timestamp() * 1000)),
-            result=json_obj.get("result", None),
-            bookmarked=json_obj.get("bookmarked", False),
-            created_at=datetime.fromtimestamp(json_obj.get("created_at", datetime.now(timezone.utc).timestamp())),
-            updated_at=datetime.fromtimestamp(json_obj.get("updated_at", datetime.now(timezone.utc).timestamp())),
-        )
-
-    def to_json(self):
-        return {
-            "id": self.id,
-            "api_task_id": self.api_task_id,
-            "api_task_callback": self.api_task_callback,
-            "name": self.name,
-            "type": self.type,
-            "status": self.status,
-            "params": json.loads(self.params),
-            "script_params": base64.b64encode(self.script_params).decode("utf-8"),
-            "priority": self.priority,
-            "result": self.result,
-            "bookmarked": self.bookmarked,
-            "created_at": int(self.created_at.timestamp()),
-            "updated_at": int(self.updated_at.timestamp()),
-        }
-
 
 class TaskTable(Base):
     __tablename__ = "task"

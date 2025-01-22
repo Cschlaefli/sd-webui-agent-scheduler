@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 from typing import Optional, List, Any, Dict
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 
 from modules import sd_samplers
 from modules.api.models import (
@@ -21,12 +21,17 @@ class QueueStatusAPI(BaseModel):
     limit: Optional[int] = Field(title="Limit", description="The maximum number of tasks to return", default=20)
     offset: Optional[int] = Field(title="Offset", description="The offset of the tasks to return", default=0)
 
+def current_utc() -> datetime:
+    return datetime.now(timezone.utc)
+
+def default_priority() -> int:
+    return int(current_utc().timestamp() * 1000)
 
 class TaskModel(BaseModel):
     id: str = Field(title="Task Id")
     api_task_id: Optional[str] = Field(title="API Task Id", default=None)
     api_task_callback: Optional[str] = Field(title="API Task Callback", default=None)
-    name: Optional[str] = Field(title="Task Name")
+    name: Optional[str] = Field(title="Task Name", default=None)
     type: str = Field(title="Task Type", description="Either txt2img or img2img")
     status: str = Field(
         "pending",
@@ -36,18 +41,19 @@ class TaskModel(BaseModel):
     params: Dict[str, Any] = Field(title="Task Parameters", description="The parameters of the task in JSON format")
     priority: Optional[int] = Field(title="Task Priority")
     position: Optional[int] = Field(title="Task Position")
-    result: Optional[str] = Field(title="Task Result", description="The result of the task in JSON format")
-    bookmarked: Optional[bool] = Field(title="Is task bookmarked")
+    result: Optional[str] = Field(title="Task Result", description="The result of the task in JSON format", default=None)
+    bookmarked: Optional[bool] = Field(title="Is task bookmarked", default=False)
     created_at: Optional[datetime] = Field(
         title="Task Created At",
         description="The time when the task was created",
-        default=None,
+        default_factory=current_utc,
     )
     updated_at: Optional[datetime] = Field(
         title="Task Updated At",
         description="The time when the task was updated",
-        default=None,
+        default_factory=current_utc,
     )
+    model_config = ConfigDict(json_encoders={datetime: lambda dt: int(dt.timestamp() * 1e3)})
 
 
 class Txt2ImgApiTaskArgs(StableDiffusionTxt2ImgProcessingAPI):
@@ -67,13 +73,15 @@ class Txt2ImgApiTaskArgs(StableDiffusionTxt2ImgProcessingAPI):
         title="Callback URL",
         description="The callback URL to send the result to.",
     )
+    send_images: bool = Field(default=False, exclude=True)
+    save_images: bool = Field(default=False, exclude=True)
 
-    class Config(StableDiffusionTxt2ImgProcessingAPI.__config__):
-        @staticmethod
-        def schema_extra(schema: Dict[str, Any], model) -> None:
-            props = schema.get("properties", {})
-            props.pop("send_images", None)
-            props.pop("save_images", None)
+    #class Config(StableDiffusionTxt2ImgProcessingAPI.__config__):
+    #    @staticmethod
+    #    def schema_extra(schema: Dict[str, Any], model) -> None:
+    #        props = schema.get("properties", {})
+    #        props.pop("send_images", None)
+    #        props.pop("save_images", None)
 
 
 class Img2ImgApiTaskArgs(StableDiffusionImg2ImgProcessingAPI):
@@ -93,13 +101,8 @@ class Img2ImgApiTaskArgs(StableDiffusionImg2ImgProcessingAPI):
         title="Callback URL",
         description="The callback URL to send the result to.",
     )
-
-    class Config(StableDiffusionImg2ImgProcessingAPI.__config__):
-        @staticmethod
-        def schema_extra(schema: Dict[str, Any], model) -> None:
-            props = schema.get("properties", {})
-            props.pop("send_images", None)
-            props.pop("save_images", None)
+    send_images: bool = Field(default=False, exclude=True)
+    save_images: bool = Field(default=False, exclude=True)
 
 
 class QueueTaskResponse(BaseModel):
@@ -112,21 +115,16 @@ class QueueStatusResponse(BaseModel):
     total_pending_tasks: int = Field(title="Queue length", description="The total pending tasks in the queue")
     paused: bool = Field(title="Paused", description="Whether the queue is paused")
 
-    class Config:
-        json_encoders = {datetime: lambda dt: int(dt.timestamp() * 1e3)}
-
 
 class HistoryResponse(BaseModel):
     tasks: List[TaskModel] = Field(title="Tasks")
     total: int = Field(title="Task count")
 
-    class Config:
-        json_encoders = {datetime: lambda dt: int(dt.timestamp() * 1e3)}
-
 
 class UpdateTaskArgs(BaseModel):
-    name: Optional[str] = Field(title="Task Name")
-    checkpoint: Optional[str]
+    name: Optional[str] = Field(default=None, title="Task Name")
+    checkpoint: Optional[str] = None
     params: Optional[Dict[str, Any]] = Field(
+        default=None,
         title="Task Parameters", description="The parameters of the task in JSON format"
     )

@@ -197,7 +197,7 @@ def regsiter_apis(app: App, task_runner: TaskRunner):
     @app.get("/agent-scheduler/v1/export")
     def export_queue(limit: int = 1000, offset: int = 0):
         pending_tasks = task_manager.get_tasks(status=TaskStatus.PENDING, limit=limit, offset=offset)
-        pending_tasks = [Task.from_table(t).to_json() for t in pending_tasks]
+        pending_tasks = [Task.from_table(t).model_dump_json() for t in pending_tasks]
         return pending_tasks
 
     class StringRequestBody(BaseModel):
@@ -213,7 +213,7 @@ def regsiter_apis(app: App, task_runner: TaskRunner):
                     obj["id"] = str(uuid4())
                 obj["result"] = None
                 obj["status"] = TaskStatus.PENDING
-                task = Task.from_json(obj)
+                task = Task(**obj)
                 taskList.append(task)
 
             for task in taskList:
