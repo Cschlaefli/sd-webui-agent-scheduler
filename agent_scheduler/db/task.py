@@ -51,15 +51,15 @@ class TaskStatus(str, Enum):
 
 class Task(TaskModel):
     script_params: bytes = Field(default=None, exclude=True)
-    params: Json[Any]
+    params: Optional[Json[Any]] = Field(default=None)
 
     @field_serializer('script_params', when_used='json-unless-none')
     def serialize_script_params(self, script_params: bytes) -> str:
-        return base64.b64encode(script_params).decode("utf-8"),
+        return base64.b64encode(script_params).decode("utf-8")
 
     def __init__(self, **kwargs):
         priority = kwargs.pop("priority", int(datetime.now(timezone.utc).timestamp() * 1000))
-        super().__init__(priority=priority, **kwargs)
+        super().__init__(priority=priority, position=None, **kwargs)
 
     @staticmethod
     def from_table(table: "TaskTable"):
@@ -86,7 +86,7 @@ class Task(TaskModel):
             api_task_callback=self.api_task_callback,
             name=self.name,
             type=self.type,
-            params=self.params,
+            params=json.dumps(self.params or "{}"),
             script_params=self.script_params,
             priority=self.priority,
             status=self.status,
