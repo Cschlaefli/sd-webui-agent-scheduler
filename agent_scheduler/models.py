@@ -39,8 +39,8 @@ class TaskModel(BaseModel):
         description="Either pending, running, done or failed",
     )
     params: Dict[str, Any] = Field(title="Task Parameters", description="The parameters of the task in JSON format")
-    priority: Optional[int] = Field(title="Task Priority")
-    position: Optional[int] = Field(title="Task Position")
+    priority: Optional[int] = Field(default=None, title="Task Priority")
+    position: Optional[int] = Field(defalt=None, title="Task Position")
     result: Optional[str] = Field(title="Task Result", description="The result of the task in JSON format", default=None)
     bookmarked: Optional[bool] = Field(title="Is task bookmarked", default=False)
     created_at: Optional[datetime] = Field(

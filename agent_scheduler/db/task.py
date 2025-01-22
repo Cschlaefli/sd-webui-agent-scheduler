@@ -2,8 +2,8 @@ import json
 import base64
 from enum import Enum
 from datetime import datetime, timezone
-from typing import Optional, Union, List, Dict, Any
-from pydantic import Field, Base64Bytes, Json
+from typing import Optional, Union, List, Dict, Any, Annotated, Literal
+from pydantic import Field, Base64Bytes, Json, EncodedBytes, EncoderProtocol, field_serializer
 
 
 from sqlalchemy import (
@@ -50,8 +50,12 @@ class TaskStatus(str, Enum):
 
 
 class Task(TaskModel):
-    script_params: Optional[Base64Bytes] = None
+    script_params: bytes = Field(default=None, exclude=True)
     params: Json[Any]
+
+    @field_serializer('script_params', when_used='json-unless-none')
+    def serialize_script_params(self, script_params: bytes) -> str:
+        return base64.b64encode(script_params).decode("utf-8"),
 
     def __init__(self, **kwargs):
         priority = kwargs.pop("priority", int(datetime.now(timezone.utc).timestamp() * 1000))

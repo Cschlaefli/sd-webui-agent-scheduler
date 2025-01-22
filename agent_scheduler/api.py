@@ -209,8 +209,9 @@ def regsiter_apis(app: App, task_runner: TaskRunner):
             objList = json.loads(queue.content)
             taskList: List[Task] = []
             for obj in objList:
-                if "id" not in obj or not obj["id"] or obj["id"] == "":
+                if "id" not in obj or not obj["id"]:
                     obj["id"] = str(uuid4())
+                obj["script_params"] = base64.b64decode(obj["script_params"])
                 obj["result"] = None
                 obj["status"] = TaskStatus.PENDING
                 task = Task(**obj)
