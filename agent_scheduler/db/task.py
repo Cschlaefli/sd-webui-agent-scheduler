@@ -51,7 +51,7 @@ class TaskStatus(str, Enum):
 
 class Task(TaskModel):
     script_params: bytes = Field(default=None, exclude=True)
-    params: Optional[Json[Any]] = Field(default=None)
+    params : Json[Any] = Field(default=None)
 
     @field_serializer('script_params', when_used='json-unless-none')
     def serialize_script_params(self, script_params: bytes) -> str:
@@ -69,7 +69,7 @@ class Task(TaskModel):
             api_task_callback=table.api_task_callback,
             name=table.name,
             type=table.type,
-            params=table.params,
+            params=table.params if isinstance(table.params, str) else json.dumps(table.params),
             script_params=table.script_params,
             priority=table.priority,
             status=table.status,
